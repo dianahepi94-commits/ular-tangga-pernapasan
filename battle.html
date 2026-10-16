@@ -1,0 +1,305 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Respiratory Battle - IPAS Kelas 6</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;padding:16px;font-family:Arial,sans-serif;
+  background:linear-gradient(135deg,#102a43,#087e8b);
+  color:#fff;min-height:100vh;text-align:center
+}
+.game{
+  max-width:650px;margin:auto;background:#f4fbff;color:#17324d;
+  border-radius:22px;padding:20px;box-shadow:0 8px 30px #061b2b88
+}
+h1{color:#087e8b;margin:5px 0}
+.sub{color:#52677a}
+.stats{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.stat{background:#dceff7;border-radius:12px;padding:10px;flex:1;min-width:90px}
+.arena{
+  display:flex;align-items:center;justify-content:space-around;
+  background:linear-gradient(#d5f5ff,#f2fcff);border-radius:18px;
+  padding:16px;margin:15px 0
+}
+.fighter{flex:1}
+.sprite{font-size:65px}
+.hp{height:13px;background:#ccd5dc;border-radius:10px;overflow:hidden}
+.bar{height:100%;background:#27ae60;width:100%;transition:width .3s}
+.enemybar{background:#e74c3c}
+.vs{font-weight:bold;color:#087e8b;font-size:20px}
+button{
+  border:0;border-radius:12px;padding:13px 15px;margin:5px;
+  font-size:15px;font-weight:bold;cursor:pointer;
+  background:#087e8b;color:white
+}
+button:disabled{opacity:.5;cursor:default}
+.answer{
+  display:block;width:100%;text-align:left;background:#e4f2f8;
+  color:#17324d;border:2px solid transparent
+}
+.answer:hover:not(:disabled){border-color:#087e8b}
+#question{font-size:18px;font-weight:bold;line-height:1.5}
+#feedback{min-height:42px;font-weight:bold;line-height:1.5}
+#start{background:#f39c12}
+.hidden{display:none!important}
+.levels{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.level{background:#dceff7;color:#17324d}
+.level.active{background:#f39c12;color:#fff}
+.note{font-size:13px;color:#52677a}
+</style>
+</head>
+<body>
+<div class="game">
+  <h1>🫁 RESPIRATORY BATTLE</h1>
+  <p class="sub">Game Battle IPAS • Kelas VI SD</p>
+
+  <div class="levels">
+    <button class="level active" id="lv1">Level 1</button>
+    <button class="level" id="lv2" disabled>Level 2</button>
+    <button class="level" id="lv3" disabled>Level 3</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat">❤️ Nyawa<br><b id="lives">3</b></div>
+    <div class="stat">⭐ Skor<br><b id="score">0</b></div>
+    <div class="stat">⚔️ Soal<br><b id="progress">0/5</b></div>
+  </div>
+
+  <div class="arena">
+    <div class="fighter">
+      <div class="sprite" id="hero">🧑‍🚀</div>
+      <b>Pahlawan Paru</b>
+      <p class="note">Energi</p>
+      <div class="hp"><div class="bar" id="heroBar"></div></div>
+      <p id="heroHP">100%</p>
+    </div>
+    <div class="vs">VS</div>
+    <div class="fighter">
+      <div class="sprite" id="monster">🦠</div>
+      <b id="enemyName">Monster Kuman</b>
+      <p class="note">Energi monster</p>
+      <div class="hp"><div class="bar enemybar" id="enemyBar"></div></div>
+      <p id="enemyHP">100%</p>
+    </div>
+  </div>
+
+  <div id="intro">
+    <h2>Siap Bertarung?</h2>
+    <p>Jawab 5 soal pada setiap level untuk mengalahkan monster!</p>
+    <button id="start">⚔️ Mulai Battle</button>
+  </div>
+
+  <div id="battle" class="hidden">
+    <p id="question"></p>
+    <div id="answers"></div>
+    <p id="feedback" aria-live="polite"></p>
+    <button id="next" class="hidden">Lanjutkan ➜</button>
+  </div>
+
+  <div id="result" class="hidden">
+    <h2 id="resultTitle"></h2>
+    <p id="resultText"></p>
+    <button id="resultButton">Main Lagi</button>
+  </div>
+
+  <p class="note">Belajar sistem pernapasan sambil bertualang!</p>
+</div>
+
+<script>
+const levels = [
+{
+ name:"Monster Debu", icon:"🌫️", enemyHP:50,
+ questions:[
+  ["Organ utama sistem pernapasan adalah ...",
+   ["Jantung","Paru-paru","Lambung"],1],
+  ["Udara masuk pertama kali melalui ...",
+   ["Hidung","Kerongkongan","Usus"],0],
+  ["Gas yang dibutuhkan tubuh untuk respirasi adalah ...",
+   ["Oksigen","Karbon dioksida","Asap"],0],
+  ["Hidung membantu ...",
+   ["Menyaring udara","Memompa darah","Mencerna makanan"],0],
+  ["Kebiasaan baik bagi paru-paru adalah ...",
+   ["Menghirup asap rokok","Menghindari asap rokok","Membakar sampah"],1]
+ ]
+},
+{
+ name:"Virus Kabut", icon:"🦠", enemyHP:70,
+ questions:[
+  ["Saluran udara dari laring menuju bronkus adalah ...",
+   ["Trakea","Esofagus","Ureter"],0],
+  ["Pertukaran gas terjadi di ...",
+   ["Alveolus","Lambung","Jantung"],0],
+  ["Cabang trakea yang menuju paru-paru disebut ...",
+   ["Bronkus","Usus","Aorta"],0],
+  ["Otot utama yang membantu pernapasan adalah ...",
+   ["Diafragma","Bisep","Otot jari"],0],
+  ["Saat menarik napas, rongga dada umumnya ...",
+   ["Mengembang","Mengecil","Menghilang"],0]
+ ]
+},
+{
+ name:"Raja Polusi", icon:"👾", enemyHP:100,
+ questions:[
+  ["Saat diafragma berkontraksi, diafragma bergerak ...",
+   ["Turun dan mendatar","Naik ke atas","Tidak bergerak"],0],
+  ["Cabang kecil bronkus disebut ...",
+   ["Bronkiolus","Alveolus jantung","Esofagus"],0],
+  ["Gas yang dikeluarkan lebih banyak saat mengembuskan napas adalah ...",
+   ["Karbon dioksida","Oksigen murni","Helium"],0],
+  ["Salah satu cara mengurangi paparan polusi adalah ...",
+   ["Menghindari sumber asap","Mendekati pembakaran","Membakar sampah"],0],
+  ["Di alveolus, oksigen berpindah dari udara ke ...",
+   ["Darah","Lambung","Tulang"],0]
+ ]
+}
+];
+
+let level=0, index=0, score=0, lives=3;
+let heroHP=100, enemyHP=100, running=false, answered=false;
+
+const $=id=>document.getElementById(id);
+
+function updateStats(){
+  $("lives").textContent=lives;
+  $("score").textContent=score;
+  $("progress").textContent=index+"/5";
+  $("heroBar").style.width=heroHP+"%";
+  $("enemyBar").style.width=(enemyHP/levels[level].enemyHP*100)+"%";
+  $("heroHP").textContent=heroHP+"%";
+  $("enemyHP").textContent=enemyHP+"%";
+}
+
+function updateLevels(){
+  for(let i=0;i<3;i++){
+    $("lv"+(i+1)).classList.toggle("active",i===level);
+    $("lv"+(i+1)).disabled=i>level;
+  }
+}
+
+function startBattle(){
+  index=0;
+  lives=3;
+  heroHP=100;
+  enemyHP=levels[level].enemyHP;
+  running=true;
+  answered=false;
+  $("intro").classList.add("hidden");
+  $("result").classList.add("hidden");
+  $("battle").classList.remove("hidden");
+  $("monster").textContent=levels[level].icon;
+  $("enemyName").textContent=levels[level].name;
+  $("hero").textContent="🧑‍🚀";
+  updateLevels();
+  updateStats();
+  showQuestion();
+}
+
+function showQuestion(){
+  if(!running)return;
+  if(index>=5){winLevel();return;}
+  answered=false;
+  $("feedback").textContent="";
+  $("next").classList.add("hidden");
+  $("question").textContent=
+    "Soal "+(index+1)+": "+levels[level].questions[index][0];
+  $("answers").innerHTML="";
+  levels[level].questions[index][1].forEach((text,i)=>{
+    const b=document.createElement("button");
+    b.className="answer";
+    b.textContent=String.fromCharCode(65+i)+". "+text;
+    b.onclick=()=>chooseAnswer(i);
+    $("answers").appendChild(b);
+  });
+  updateStats();
+}
+
+function chooseAnswer(choice){
+  if(answered||!running)return;
+  answered=true;
+  const q=levels[level].questions[index];
+  const buttons=$("answers").querySelectorAll("button");
+  buttons.forEach(b=>b.disabled=true);
+
+  if(choice===q[2]){
+    score+=20;
+    enemyHP=Math.max(0,enemyHP-20);
+    $("feedback").textContent="✅ Benar! Serangan berhasil! Monster kehilangan energi.";
+    $("hero").textContent="⚡";
+  }else{
+    lives--;
+    heroHP=Math.max(0,heroHP-30);
+    $("feedback").textContent="❌ Belum tepat! Monster menyerang. Pelajari kembali materi ini.";
+    $("monster").textContent="💥";
+  }
+
+  updateStats();
+
+  if(lives<=0){
+    running=false;
+    $("next").textContent="Coba Lagi";
+    $("next").classList.remove("hidden");
+    $("next").onclick=()=>startBattle();
+    $("feedback").textContent+=" Nyawa habis!";
+    return;
+  }
+
+  if(index===4){
+    $("next").textContent="Lihat Hasil Level";
+  }else{
+    $("next").textContent="Soal Berikutnya ➜";
+  }
+
+  $("next").classList.remove("hidden");
+  $("next").onclick=()=>{
+    if(!running){
+      startBattle();
+      return;
+    }
+    index++;
+    $("hero").textContent="🧑‍🚀";
+    $("monster").textContent=levels[level].icon;
+    showQuestion();
+  };
+}
+
+function winLevel(){
+  running=false;
+  $("battle").classList.add("hidden");
+  $("result").classList.remove("hidden");
+
+  if(level<2){
+    $("resultTitle").textContent="🎉 Level "+(level+1)+" Selesai!";
+    $("resultText").textContent=
+      "Kamu berhasil menyelesaikan tantangan "+levels[level].name+
+      ". Skor: "+score+". Buka level berikutnya untuk melanjutkan battle!";
+    level++;
+    updateLevels();
+    $("resultButton").textContent="Masuk Level "+(level+1);
+    $("resultButton").onclick=startBattle;
+  }else{
+    $("resultTitle").textContent="🏆 KAMU JUARA!";
+    $("resultText").textContent=
+      "Semua level berhasil ditaklukkan! Skor akhir: "+score+
+      ". Kamu adalah Pahlawan Pernapasan!";
+    $("resultButton").textContent="Main dari Level 1";
+    $("resultButton").onclick=()=>{
+      level=0;
+      updateLevels();
+      startBattle();
+    };
+  }
+}
+
+$("start").onclick=startBattle;
+$("lv1").onclick=()=>{level=0;startBattle();};
+$("lv2").onclick=()=>{if(level>=1){level=1;startBattle();}};
+$("lv3").onclick=()=>{if(level>=2){level=2;startBattle();}};
+updateLevels();
+updateStats();
+</script>
+</body>
+</html>
