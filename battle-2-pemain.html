@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Respiratory Battle - 2 Pemain</title>
+<style>
+:root {
+  --blue: #36a5ff;
+  --red: #ff5964;
+  --dark: #10152f;
+  --panel: #20294b;
+  --gold: #ffcf56;
+  --green: #4ce0a0;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #263e76, #10152f 70%);
+  color: white;
+  font-family: system-ui, Arial, sans-serif;
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+button { font: inherit; touch-action: manipulation; }
+.game { max-width: 1000px; margin: auto; padding: 14px; }
+header { text-align: center; }
+h1 { font-size: clamp(23px, 5vw, 38px); margin: 4px 0; }
+.subtitle { color: #c7d7ff; font-size: 13px; }
+.level-row {
+  display: flex; justify-content: center; align-items: center;
+  flex-wrap: wrap; gap: 8px; margin: 14px 0;
+}
+.level {
+  padding: 8px 13px; border: 1px solid #7182b5;
+  border-radius: 20px; color: #c7d7ff; font-size: 13px;
+}
+.level.active { background: var(--gold); color: #222; font-weight: 800; }
+.small-btn {
+  border: 0; border-radius: 10px; padding: 9px 12px;
+  background: #34436e; color: white; font-weight: 700;
+}
+.status {
+  background: #18213f; border: 1px solid #35466f;
+  padding: 10px; border-radius: 12px; text-align: center;
+  margin-bottom: 12px; font-size: 13px;
+}
+.fighters {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.fighter {
+  background: var(--panel); border: 2px solid #39486e;
+  border-radius: 16px; padding: 12px; min-width: 0;
+}
+.fighter.p1 { border-color: var(--blue); }
+.fighter.p2 { border-color: var(--red); }
+.fighter h2 { margin: 0; font-size: 17px; }
+.avatar { text-align: center; font-size: clamp(48px, 10vw, 76px); margin: 4px; }
+.hp-label { display: flex; justify-content: space-between; font-size: 12px; }
+.hp-track { height: 13px; background: #090e21; border-radius: 12px; overflow: hidden; margin: 5px 0 10px; }
+.hp-fill { height: 100%; width: 100%; transition: width .18s; }
+.p1 .hp-fill { background: linear-gradient(90deg, #138aff, #67d6ff); }
+.p2 .hp-fill { background: linear-gradient(90deg, #ff394f, #ff9b68); }
+.stat { font-size: 12px; color: #d4ddfa; }
+.arena {
+  margin: 12px 0; padding: 12px;
+  background: #131c38; border: 1px solid #34446f;
+  border-radius: 16px; text-align: center;
+}
+.arena-title { color: var(--gold); font-weight: 800; }
+.arena-message { min-height: 24px; font-size: 14px; margin-top: 5px; }
+.controls {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.control-panel {
+  border-radius: 16px; background: #1a2342;
+  padding: 12px; border: 1px solid #35466f;
+}
+.control-panel h3 { margin: 0 0 10px; font-size: 15px; }
+.p1-title { color: #67c5ff; }
+.p2-title { color: #ff8790; }
+.action {
+  width: 100%; min-height: 54px; border: 0;
+  border-radius: 13px; font-weight: 850;
+  margin: 5px 0; padding: 10px 5px;
+  user-select: none; -webkit-user-select: none;
+}
+.attack1 { background: var(--blue); color: #07152a; }
+.attack2 { background: var(--red); color: #2a0710; }
+.special { background: var(--gold); color: #2b2100; }
+.action:active { transform: scale(.97); filter: brightness(1.12); }
+.action:disabled { opacity: .45; }
+.help { color: #c6d3f6; font-size: 12px; line-height: 1.6; margin-top: 12px; }
+.quiz {
+  margin-top: 14px; padding: 14px;
+  border: 2px solid var(--gold); border-radius: 16px;
+  background: #252746;
+}
+.quiz.hidden { display: none; }
+.quiz h3 { margin: 0 0 8px; color: var(--gold); }
+.question { font-weight: 750; line-height: 1.5; margin-bottom: 10px; }
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.answer {
+  border: 1px solid #6474a6; background: #34436e; color: white;
+  border-radius: 10px; padding: 11px 8px; min-height: 45px;
+  text-align: left;
+}
+.answer:disabled { opacity: .7; }
+.feedback { min-height: 23px; margin-top: 9px; font-size: 13px; }
+.next-level {
+  display: none; margin: 12px auto; width: 100%;
+  background: var(--green); color: #08291d;
+  padding: 14px; border: 0; border-radius: 12px;
+  font-weight: 850;
+}
+footer { text-align: center; color: #aab9e6; font-size: 11px; margin: 18px 0 6px; }
+@media (max-width: 420px) {
+  .game { padding: 9px; }
+  .fighter, .control-panel { padding: 9px; }
+  .fighters, .controls { gap: 8px; }
+  .fighter h2 { font-size: 15px; }
+  .action { font-size: 13px; min-height: 51px; }
+  .answers { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="game">
+  <header>
+    <h1>🫁 RESPIRATORY BATTLE</h1>
+    <div class="subtitle">Dua pemain • Satu HP • Bertarung bersama!</div>
+  </header>
+
+  <div class="level-row">
+    <span class="level active" id="lv1">LEVEL 1</span>
+    <span class="level" id="lv2">LEVEL 2</span>
+    <span class="level" id="lv3">LEVEL 3</span>
+    <button class="small-btn" id="restart">↻ Ulangi</button>
+  </div>
+
+  <div class="status" id="status">
+    Pertarungan dimulai! Tekan tombol serangan masing-masing.
+  </div>
+
+  <section class="fighters">
+    <div class="fighter p1">
+      <h2>🔵 PEMAIN 1</h2>
+      <div class="avatar">🦸</div>
+      <div class="hp-label"><span>Energi</span><strong id="hp1Text">100/100</strong></div>
+      <div class="hp-track"><div class="hp-fill" id="hp1Bar"></div></div>
+      <div class="stat">⭐ Skor: <strong id="score1">0</strong></div>
+      <div class="stat">💥 Serangan: <strong id="hits1">0</strong></div>
+    </div>
+
+    <div class="fighter p2">
+      <h2>🔴 PEMAIN 2</h2>
+      <div class="avatar">👾</div>
+      <div class="hp-label"><span>Energi</span><strong id="hp2Text">100/100</strong></div>
+      <div class="hp-track"><div class="hp-fill" id="hp2Bar"></div></div>
+      <div class="stat">⭐ Skor: <strong id="score2">0</strong></div>
+      <div class="stat">💥 Serangan: <strong id="hits2">0</strong></div>
+    </div>
+  </section>
+
+  <section class="arena">
+    <div class="arena-title">⚔️ ARENA PERTARUNGAN</div>
+    <div class="arena-message" id="arenaMessage">
+      Siapakah yang akan menjadi juara?
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="control-panel">
+      <h3 class="p1-title">🔵 Kontrol Pemain 1</h3>
+      <button class="action attack1" id="attack1">👊 SERANG BIASA</button>
+      <button class="action special" id="special1">⚡ SERANGAN KHUSUS</button>
+      <div class="stat">Serangan khusus: jawab soal dengan benar.</div>
+    </div>
+    <div class="control-panel">
+      <h3 class="p2-title">🔴 Kontrol Pemain 2</h3>
+      <button class="action attack2" id="attack2">👊 SERANG BIASA</button>
+      <button class="action special" id="special2">⚡ SERANGAN KHUSUS</button>
+      <div class="stat">Serangan khusus: jawab soal dengan benar.</div>
+    </div>
+  </section>
+
+  <section class="quiz hidden" id="quiz">
+    <h3 id="quizTitle">⚡ Tantangan Serangan Khusus</h3>
+    <div class="question" id="question"></div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback" aria-live="polite"></div>
+  </section>
+
+  <button class="next-level" id="nextLevel">🏆 Lanjut ke Level Berikutnya</button>
+
+  <div class="help">
+    📘 <strong>Aturan bermain:</strong><br>
+    • Kedua pemain boleh menyerang kapan saja. Tidak ada giliran.<br>
+    • Serangan biasa mengurangi energi lawan sebanyak 5 poin.<br>
+    • Serangan khusus memberi 20 poin kerusakan jika jawaban benar.<br>
+    • Jawaban salah tidak mengurangi energi lawan.<br>
+    • Pemain yang energinya mencapai 0 kalah dalam level tersebut.
+  </div>
+  <footer>Game edukasi IPAS Kelas VI • Sistem Pernapasan Manusia</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const questions = {
+  1: [
+    {q:"Organ utama dalam sistem pernapasan manusia adalah ...", a:["Jantung","Paru-paru","Lambung","Ginjal"], c:1, e:"Paru-paru merupakan organ utama tempat pertukaran gas."},
+    {q:"Udara masuk ke tubuh terutama melalui ...", a:["Hidung","Kerongkongan","Lambung","Usus"], c:0, e:"Hidung menyaring, menghangatkan, dan melembapkan udara."},
+    {q:"Gas yang dibutuhkan tubuh untuk menghasilkan energi adalah ...", a:["Karbon dioksida","Nitrogen","Oksigen","Uap air"], c:2, e:"Oksigen digunakan dalam proses respirasi sel."},
+    {q:"Organ yang menghubungkan tenggorokan dengan bronkus adalah ...", a:["Trakea","Diafragma","Alveolus","Rongga hidung"], c:0, e:"Trakea menyalurkan udara menuju bronkus."}
+  ],
+  2: [
+    {q:"Tempat pertukaran oksigen dan karbon dioksida di paru-paru adalah ...", a:["Bronkus","Alveolus","Laring","Trakea"], c:1, e:"Alveolus memiliki dinding tipis dan dikelilingi kapiler darah."},
+    {q:"Saat menarik napas, diafragma umumnya ...", a:["Mengendur dan melengkung","Berkontraksi dan mendatar","Menutup trakea","Berhenti bergerak"], c:1, e:"Diafragma berkontraksi dan mendatar sehingga volume rongga dada meningkat."},
+    {q:"Saluran yang bercabang dari trakea menuju paru-paru disebut ...", a:["Bronkus","Alveolus","Esofagus","Kapiler"], c:0, e:"Bronkus merupakan cabang trakea menuju paru-paru."},
+    {q:"Gas yang dikeluarkan tubuh saat mengembuskan napas adalah ...", a:["Oksigen saja","Karbon dioksida","Helium","Hidrogen"], c:1, e:"Karbon dioksida merupakan salah satu hasil respirasi sel."}
+  ],
+  3: [
+    {q:"Mengapa alveolus cocok sebagai tempat pertukaran gas?", a:["Dindingnya tebal","Tidak memiliki pembuluh darah","Dinding tipis dan banyak kapiler","Selalu tertutup"], c:2, e:"Dinding tipis dan banyak kapiler membantu difusi gas."},
+    {q:"Apa yang terjadi pada rongga dada saat menarik napas?", a:["Volumenya meningkat","Volumenya selalu tetap","Volumenya mengecil","Udara tidak dapat masuk"], c:0, e:"Volume rongga dada meningkat sehingga udara masuk ke paru-paru."},
+    {q:"Kebiasaan yang membantu menjaga kesehatan sistem pernapasan adalah ...", a:["Menghirup asap rokok","Berolahraga sesuai kemampuan","Membakar sampah sembarangan","Menghindari udara bersih"], c:1, e:"Aktivitas fisik yang sesuai kemampuan mendukung kesehatan tubuh."},
+    {q:"Jika alveolus mengalami gangguan, proses yang paling terdampak adalah ...", a:["Pencernaan makanan","Pertukaran gas","Pembentukan urine","Penglihatan"], c:1, e:"Alveolus merupakan tempat pertukaran oksigen dan karbon dioksida."}
+  ]
+};
+
+let level = 1;
+let hp = [100, 100];
+let score = [0, 0];
+let hits = [0, 0];
+let cooldown = [false, false];
+let gameOver = false;
+let questionUsed = [[], []];
+let quizPlayer = null;
+let quizAnswered = false;
+let specialBusy = [false, false];
+
+function render() {
+  for (let i = 0; i < 2; i++) {
+    const n = i + 1;
+    $(`hp${n}Text`).textContent = `${hp[i]}/100`;
+    $(`hp${n}Bar`).style.width = hp[i] + "%";
+    $(`score${n}`).textContent = score[i];
+    $(`hits${n}`).textContent = hits[i];
+    $(`attack${n}`).disabled = gameOver || hp[i] <= 0 || cooldown[i];
+    $(`special${n}`).disabled = gameOver || hp[i] <= 0 || specialBusy[i];
+  }
+  [1,2,3].forEach(n => $(`lv${n}`).classList.toggle("active", n === level));
+}
+
+function message(text) {
+  $("arenaMessage").textContent = text;
+}
+
+function damage(attacker, amount, kind) {
+  if (gameOver || hp[attacker] <= 0 || hp[1-attacker] <= 0) return;
+
+  const defender = 1 - attacker;
+  hp[defender] = Math.max(0, hp[defender] - amount);
+  hits[attacker]++;
+  score[attacker] += kind === "special" ? 20 : 5;
+
+  message(`Pemain ${attacker+1} menggunakan ${kind === "special" ? "SERANGAN KHUSUS" : "serangan biasa"}! Pemain ${defender+1} kehilangan ${amount} energi.`);
+  render();
+
+  if (hp[defender] <= 0) endLevel(attacker);
+}
+
+function normalAttack(player) {
+  if (gameOver || cooldown[player] || hp[player] <= 0) return;
+  cooldown[player] = true;
+  damage(player, 5, "normal");
+  render();
+  setTimeout(() => {
+    cooldown[player] = false;
+    render();
+  }, 450);
+}
+
+function specialAttack(player) {
+  if (gameOver || specialBusy[player] || hp[player] <= 0) return;
+  specialBusy[player] = true;
+  quizPlayer = player;
+  quizAnswered = false;
+
+  const pool = questions[level];
+  let available = pool.map((_, i) => i).filter(i => !questionUsed[player].includes(i));
+
+  if (available.length === 0) {
+    questionUsed[player] = [];
+    available = pool.map((_, i) => i);
+  }
+
+  const index = available[Math.floor(Math.random() * available.length)];
+  questionUsed[player].push(index);
+  const item = pool[index];
+
+  $("quizTitle").textContent = `⚡ Serangan Khusus Pemain ${player+1}`;
+  $("question").textContent = item.q;
+  $("feedback").textContent = "Pilih jawaban yang paling tepat!";
+  $("answers").innerHTML = "";
+
+  item.a.forEach((answer, i) => {
+    const button = document.createElement("button");
+    button.className = "answer";
+    button.textContent = `${String.fromCharCode(65+i)}. ${answer}`;
+    button.addEventListener("click", () => answerQuestion(i, item, button));
+    $("answers").appendChild(button);
+  });
+
+  $("quiz").classList.remove("hidden");
+  $("quiz").scrollIntoView({behavior:"smooth", block:"nearest"});
+  render();
+}
+
+function answerQuestion(choice, item, clickedButton) {
+  if (quizAnswered || quizPlayer === null) return;
+  quizAnswered = true;
+
+  const player = quizPlayer;
+  const buttons = $("answers").querySelectorAll("button");
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    if (i === item.c) b.style.borderColor = "#4ce0a0";
+    if (i === choice && choice !== item.c) b.style.borderColor = "#ff5964";
+  });
+
+  if (choice === item.c) {
+    $("feedback").textContent = "✅ Benar! " + item.e;
+    if (!gameOver) damage(player, 20, "special");
+  } else {
+    $("feedback").textContent = "❌ Belum tepat. " + item.e;
+    message(`Pemain ${player+1} belum berhasil menggunakan serangan khusus.`);
+  }
+
+  $("feedback").textContent += " Tekan tombol di bawah untuk menutup soal.";
+  const close = document.createElement("button");
+  close.className = "small-btn";
+  close.style.marginTop = "8px";
+  close.textContent = "Tutup Soal";
+  close.addEventListener("click", closeQuiz);
+  $("answers").appendChild(close);
+  quizAnswered = true;
+  render();
+}
+
+function closeQuiz() {
+  $("quiz").classList.add("hidden");
+  if (quizPlayer !== null) specialBusy[quizPlayer] = false;
+  quizPlayer = null;
+  render();
+}
+
+function endLevel(winner) {
+  gameOver = true;
+  message(`🏆 Pemain ${winner+1} memenangkan Level ${level}!`);
+  $("status").textContent = `Level ${level} selesai. Pemain ${winner+1} menang!`;
+  $("nextLevel").style.display = "block";
+  $("nextLevel").textContent = level < 3
+    ? `➡️ Mulai Level ${level+1}`
+    : "🏆 Main Lagi dari Level 1";
+  render();
+}
+
+function nextLevel() {
+  if (level >= 3) {
+    level = 1;
+    score = [0, 0];
+    hits = [0, 0];
+  } else {
+    level++;
+  }
+
+  hp = [100, 100];
+  cooldown = [false, false];
+  specialBusy = [false, false];
+  questionUsed = [[], []];
+  gameOver = false;
+  quizPlayer = null;
+  quizAnswered = false;
+
+  $("quiz").classList.add("hidden");
+  $("nextLevel").style.display = "none";
+  $("status").textContent = `Level ${level} dimulai! Kedua pemain dapat menyerang bersama.`;
+  message("Pertarungan dimulai! Siap menyerang?");
+  render();
+}
+
+function restart() {
+  level = 1;
+  hp = [100, 100];
+  score = [0, 0];
+  hits = [0, 0];
+  cooldown = [false, false];
+  specialBusy = [false, false];
+  questionUsed = [[], []];
+  gameOver = false;
+  quizPlayer = null;
+  quizAnswered = false;
+
+  $("quiz").classList.add("hidden");
+  $("nextLevel").style.display = "none";
+  $("status").textContent = "Pertarungan baru dimulai!";
+  message("Siapakah yang akan menjadi juara?");
+  render();
+}
+
+$("attack1").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  normalAttack(0);
+});
+$("attack2").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  normalAttack(1);
+});
+$("special1").addEventListener("click", () => specialAttack(0));
+$("special2").addEventListener("click", () => specialAttack(1));
+$("nextLevel").addEventListener("click", nextLevel);
+$("restart").addEventListener("click", restart);
+
+render();
+</script>
+</body>
+</html>
