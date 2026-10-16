@@ -1,0 +1,442 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ular Tangga Sistem Pernapasan</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 15px;
+  font-family: Arial, sans-serif;
+  background: #eaf7ff;
+  color: #17324d;
+  text-align: center;
+}
+h1 { color: #087e8b; font-size: 25px; }
+.subtitle { margin-bottom: 18px; }
+.panel {
+  max-width: 650px;
+  margin: auto;
+  background: white;
+  border-radius: 18px;
+  padding: 15px;
+  box-shadow: 0 4px 15px #c7dce8;
+}
+#board {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 15px 0;
+}
+.cell {
+  min-height: 65px;
+  border: 1px solid #cbdde5;
+  border-radius: 8px;
+  background: #f3fbff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  position: relative;
+  overflow-wrap: anywhere;
+}
+.cell:nth-child(even) { background: #e3f6ef; }
+.cell .num { font-weight: bold; font-size: 14px; }
+.cell .symbol { font-size: 19px; }
+.cell.player {
+  background: #ffe6a7;
+  border: 2px solid #e09f00;
+}
+button {
+  border: none;
+  border-radius: 10px;
+  background: #087e8b;
+  color: white;
+  padding: 12px 18px;
+  font-size: 16px;
+  cursor: pointer;
+  margin: 5px;
+}
+button:disabled { opacity: .5; cursor: default; }
+#roll { background: #f28c28; font-weight: bold; }
+#dice { font-size: 40px; margin: 5px; }
+#message {
+  min-height: 42px;
+  line-height: 1.5;
+  font-weight: bold;
+}
+.legend { font-size: 13px; line-height: 1.8; }
+#quiz {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #102a43bb;
+  padding: 15px;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.quiz-card {
+  width: 100%;
+  max-width: 420px;
+  background: white;
+  padding: 22px;
+  border-radius: 18px;
+}
+#answers button {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  text-align: left;
+  background: #e5f4fb;
+  color: #17324d;
+}
+#answers button:disabled { opacity: 1; }
+#feedback { font-weight: bold; }
+@media (max-width: 400px) {
+  .cell { min-height: 54px; font-size: 10px; }
+  .cell .num { font-size: 12px; }
+  .cell .symbol { font-size: 16px; }
+  body { padding: 8px; }
+}
+</style>
+</head>
+<body>
+
+<h1>🫁 Ular Tangga Pernapasan</h1>
+<p class="subtitle">Game Edukasi IPAS Kelas VI SD</p>
+
+<div class="panel">
+  <div id="status">
+    <b>Posisi pemain:</b> Kotak 1<br>
+    <b>Skor:</b> 0
+  </div>
+
+  <div id="dice">🎲</div>
+  <button id="roll" onclick="rollDice()">Lempar Dadu</button>
+
+  <div id="board"></div>
+
+  <div class="legend">
+    🪜 Tangga: jawab benar untuk naik.<br>
+    🐍 Ular: jawab benar untuk menghindari ular.<br>
+    ⭐ Capai kotak 30 untuk menang!
+  </div>
+
+  <p id="message">Ayo mulai petualangan mengenal sistem pernapasan!</p>
+  <button onclick="restart()">🔄 Mulai Ulang</button>
+</div>
+
+<div id="quiz">
+  <div class="quiz-card">
+    <h2 id="quizTitle">Pertanyaan IPAS</h2>
+    <p id="question"></p>
+    <div id="answers"></div>
+    <p id="feedback" aria-live="polite"></p>
+    <button id="continue" onclick="closeQuiz()" hidden>
+      Lanjutkan Permainan
+    </button>
+  </div>
+</div>
+
+<script>
+const ladders = {
+  3: 11,
+  8: 16,
+  15: 24,
+  20: 28
+};
+
+const snakes = {
+  17: 7,
+  25: 13,
+  29: 19
+};
+
+const questions = [
+  {
+    q: "Apa organ utama dalam sistem pernapasan manusia?",
+    a: ["Jantung", "Paru-paru", "Lambung"],
+    correct: 1
+  },
+  {
+    q: "Udara biasanya masuk pertama kali melalui ...",
+    a: ["Hidung", "Kerongkongan", "Usus"],
+    correct: 0
+  },
+  {
+    q: "Apa fungsi rambut hidung?",
+    a: [
+      "Memompa darah",
+      "Menyaring kotoran dari udara",
+      "Mencerna makanan"
+    ],
+    correct: 1
+  },
+  {
+    q: "Apa nama saluran udara dari laring menuju bronkus?",
+    a: ["Trakea", "Esofagus", "Ureter"],
+    correct: 0
+  },
+  {
+    q: "Di manakah pertukaran oksigen dan karbon dioksida terjadi?",
+    a: ["Alveolus", "Lambung", "Jantung"],
+    correct: 0
+  },
+  {
+    q: "Gas yang dibutuhkan tubuh untuk menghasilkan energi adalah ...",
+    a: ["Karbon dioksida", "Oksigen", "Nitrogen saja"],
+    correct: 1
+  },
+  {
+    q: "Gas yang dikeluarkan tubuh saat mengembuskan napas adalah ...",
+    a: ["Karbon dioksida", "Oksigen saja", "Hidrogen"],
+    correct: 0
+  },
+  {
+    q: "Otot yang berperan penting dalam proses pernapasan adalah ...",
+    a: ["Diafragma", "Otot jari", "Otot telinga"],
+    correct: 0
+  },
+  {
+    q: "Apa yang terjadi pada rongga dada ketika menarik napas?",
+    a: [
+      "Mengembang",
+      "Selalu mengecil",
+      "Tidak berubah sama sekali"
+    ],
+    correct: 0
+  },
+  {
+    q: "Manakah kebiasaan yang baik untuk paru-paru?",
+    a: [
+      "Menghirup asap rokok",
+      "Menghindari asap rokok",
+      "Membakar sampah dekat rumah"
+    ],
+    correct: 1
+  },
+  {
+    q: "Apa fungsi lendir pada saluran pernapasan?",
+    a: [
+      "Menangkap debu dan kotoran",
+      "Memompa darah",
+      "Menghancurkan tulang"
+    ],
+    correct: 0
+  },
+  {
+    q: "Bronkus merupakan cabang dari ...",
+    a: ["Trakea", "Lambung", "Usus halus"],
+    correct: 0
+  },
+  {
+    q: "Apa nama cabang kecil dari bronkus?",
+    a: ["Bronkiolus", "Alveolus jantung", "Esofagus"],
+    correct: 0
+  },
+  {
+    q: "Manakah yang dapat membantu menjaga kesehatan pernapasan?",
+    a: [
+      "Berolahraga sesuai kemampuan",
+      "Merokok",
+      "Mengabaikan polusi"
+    ],
+    correct: 0
+  },
+  {
+    q: "Apa yang terjadi pada diafragma saat menarik napas?",
+    a: [
+      "Berkontraksi dan bergerak turun",
+      "Menghilang",
+      "Tidak pernah bergerak"
+    ],
+    correct: 0
+  }
+];
+
+let position = 1;
+let score = 0;
+let questionIndex = 0;
+let pending = null;
+let locked = false;
+let gameOver = false;
+
+const $ = id => document.getElementById(id);
+
+function drawBoard() {
+  const board = $("board");
+  board.innerHTML = "";
+
+  // Baris bawah bergerak dari kiri ke kanan.
+  // Baris berikutnya bergantian arah.
+  for (let row = 5; row >= 0; row--) {
+    for (let col = 0; col < 5; col++) {
+      const n = row % 2 === 1
+        ? row * 5 + (4 - col) + 1
+        : row * 5 + col + 1;
+
+      const cell = document.createElement("div");
+      cell.className = "cell" + (position === n ? " player" : "");
+
+      let symbol = "";
+      if (ladders[n]) symbol = "🪜";
+      if (snakes[n]) symbol = "🐍";
+      if (n === 1) symbol = "🏁";
+      if (n === 30) symbol = "🏆";
+
+      cell.innerHTML =
+        `<span class="num">${n}</span>
+         <span class="symbol">${symbol}</span>`;
+
+      if (position === n) {
+        const player = document.createElement("b");
+        player.textContent = "🙂 Kamu";
+        cell.appendChild(player);
+      }
+
+      board.appendChild(cell);
+    }
+  }
+
+  $("status").innerHTML =
+    `<b>Posisi pemain:</b> Kotak ${position}<br>
+     <b>Skor:</b> ${score}`;
+}
+
+function rollDice() {
+  if (locked || gameOver) return;
+
+  const roll = Math.floor(Math.random() * 6) + 1;
+  $("dice").textContent = ["⚀","⚁","⚂","⚃","⚄","⚅"][roll - 1];
+
+  if (position + roll > 30) {
+    $("message").textContent =
+      `Dadu ${roll}! Kamu perlu angka yang pas untuk mencapai kotak 30.`;
+    return;
+  }
+
+  position += roll;
+  drawBoard();
+
+  $("message").textContent =
+    `Kamu mendapatkan angka ${roll} dan maju ke kotak ${position}.`;
+
+  if (position === 30) {
+    win();
+    return;
+  }
+
+  if (ladders[position]) {
+    askQuestion("ladder");
+  } else if (snakes[position]) {
+    askQuestion("snake");
+  }
+}
+
+function askQuestion(type) {
+  locked = true;
+  pending = type;
+
+  const q = questions[questionIndex % questions.length];
+  questionIndex++;
+
+  $("quizTitle").textContent =
+    type === "ladder" ? "🪜 Tantangan Tangga!" : "🐍 Tantangan Ular!";
+
+  $("question").textContent = q.q;
+  $("answers").innerHTML = "";
+  $("feedback").textContent = "";
+  $("continue").hidden = true;
+
+  q.a.forEach((answer, i) => {
+    const button = document.createElement("button");
+    button.textContent = String.fromCharCode(65 + i) + ". " + answer;
+    button.onclick = () => answerQuestion(i, q.correct);
+    $("answers").appendChild(button);
+  });
+
+  $("quiz").style.display = "flex";
+}
+
+function answerQuestion(choice, correct) {
+  if (!locked || $("continue").hidden === false) return;
+
+  const buttons = $("answers").querySelectorAll("button");
+  buttons.forEach(b => b.disabled = true);
+
+  if (choice === correct) {
+    score += 10;
+    $("feedback").textContent = "✅ Benar! Kamu mendapat 10 poin.";
+
+    if (pending === "ladder") {
+      const destination = ladders[position];
+      $("feedback").textContent +=
+        ` Naik tangga ke kotak ${destination}!`;
+      position = destination;
+    } else {
+      $("feedback").textContent += " Kamu berhasil menghindari ular!";
+    }
+  } else {
+    $("feedback").textContent =
+      "❌ Belum tepat. Pelajari lagi materi pernapasan.";
+
+    if (pending === "snake") {
+      position = snakes[position];
+      $("feedback").textContent +=
+        ` Kamu turun ke kotak ${position}.`;
+    } else {
+      $("feedback").textContent += " Kamu tetap di kotak ini.";
+    }
+  }
+
+  drawBoard();
+  $("continue").hidden = false;
+  $("roll").disabled = true;
+}
+
+function closeQuiz() {
+  $("quiz").style.display = "none";
+  locked = false;
+  $("roll").disabled = false;
+
+  if (position === 30) {
+    win();
+  } else {
+    $("message").textContent =
+      "Giliran berikutnya! Terus semangat belajar.";
+  }
+}
+
+function win() {
+  gameOver = true;
+  $("roll").disabled = true;
+  $("message").textContent =
+    `🎉 Selamat! Kamu mencapai kotak 30 dengan skor ${score}!`;
+}
+
+function restart() {
+  position = 1;
+  score = 0;
+  questionIndex = 0;
+  pending = null;
+  locked = false;
+  gameOver = false;
+
+  $("quiz").style.display = "none";
+  $("roll").disabled = false;
+  $("dice").textContent = "🎲";
+  $("message").textContent =
+    "Ayo mulai petualangan mengenal sistem pernapasan!";
+
+  drawBoard();
+}
+
+drawBoard();
+</script>
+</body>
+</html>
